@@ -21,8 +21,29 @@
         </h1>
         <small>
             Category: <a
-                href="{{ url_for('.show_category', category_id=post.category.id) }}">{{ post.category.name }}</a><br>
-            Date: {{ moment(post.timestamp).format('LL') }}
+                href="{{ url_for('.show_category', category_id=post.category.id) }}">{{ post.category.name }}</a>&nbsp;&nbsp;
+            Tags: 
+                {{ post.tags|sort_items }}
+                    {% for tag in post.tags %}
+                        <a  href="{{ url_for('blog.show_tag', tag_id=tag.id) }}" >
+                            {{ tag.name }}
+                        </a>
+                    {% endfor %}<br>
+            <span>
+                Date: {{ moment(post.timestamp).format('LL') }}
+            </span><br>
+            {% if post.pinned %}
+            <span class="badge badge-info badge-pill">
+                Pinned
+            </span>
+            {% endif %} 
+            <span class="badge badge-primary badge-pill">
+                {% if post.published %}
+                Public
+                {% else %}
+                Private
+                {% endif %}
+            </span>            
         </small>
     </div>
     <div class="row">

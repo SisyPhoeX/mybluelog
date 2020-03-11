@@ -1,17 +1,13 @@
 # -*- coding: utf-8 -*-
-"""
-    :author: Grey Li (李辉)
-    :url: http://greyli.com
-    :copyright: © 2018 Grey Li <withlihui@gmail.com>
-    :license: MIT, see LICENSE for more details.
-"""
+
 import random
+from random import choice
 
 from faker import Faker
 from sqlalchemy.exc import IntegrityError
 
 from bluelog import db
-from bluelog.models import Admin, Category, Post, Comment, Link
+from bluelog.models import Admin, Category, Tag, Post, Comment, Link
 
 fake = Faker()
 
@@ -42,14 +38,30 @@ def fake_categories(count=10):
             db.session.rollback()
 
 
+def fake_tags(count=16):
+    for i in range(count):
+        tag = Tag(name=fake.word())
+        db.session.add(tag)
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+
+
 def fake_posts(count=50):
+    p = [True, False]
     for i in range(count):
         post = Post(
             title=fake.sentence(),
             body=fake.text(2000),
             category=Category.query.get(random.randint(1, Category.query.count())),
-            timestamp=fake.date_time_this_year()
+            timestamp=fake.date_time_this_year(),
+            published=choice(p),
+            pinned=choice(p)
+            # tags=Tag.query.get(random.randint(1, Tag.query.count()))
         )
+        for j in range(random.randint(1, 4)):
+            post.tags.append(Tag.query.get(random.randint(1, Tag.query.count())))
 
         db.session.add(post)
     db.session.commit()

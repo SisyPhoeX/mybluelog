@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-    :author: Grey Li (李辉)
-    :url: http://greyli.com
-    :copyright: © 2018 Grey Li <withlihui@gmail.com>
-    :license: MIT, see LICENSE for more details.
-"""
+
 from datetime import datetime
 
 from flask_login import UserMixin
@@ -44,17 +39,27 @@ class Category(db.Model):
         db.session.commit()
 
 
+association_table = db.Table(
+    'association',
+    db.Column('post_id', db.Integer, db.ForeignKey('post.id')),
+    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'))
+    )
+
+
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(60))
     body = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     can_comment = db.Column(db.Boolean, default=True)
-
+    published = db.Column(db.Boolean, default=False)  # 默认仅管理员可见
+    pinned = db.Column(db.Boolean, default=False)  # 默认不置顶 
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
 
     category = db.relationship('Category', back_populates='posts')
     comments = db.relationship('Comment', back_populates='post', cascade='all, delete-orphan')
+
+    tags = db.relationship('Tag', secondary=association_table, back_populates='posts')
 
 
 class Comment(db.Model):
@@ -82,3 +87,13 @@ class Link(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(30))
     url = db.Column(db.String(255))
+
+
+class Tag(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(16), unique=True)
+    posts = db.relationship('Post', secondary=association_table, back_populates='tags')
+
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()

@@ -1,17 +1,12 @@
 # -*- coding: utf-8 -*-
-"""
-    :author: Grey Li (李辉)
-    :url: http://greyli.com
-    :copyright: © 2018 Grey Li <withlihui@gmail.com>
-    :license: MIT, see LICENSE for more details.
-"""
+
 from flask import render_template, flash, redirect, url_for, request, current_app, Blueprint, abort, make_response
 from flask_login import current_user
 
 from bluelog.emails import send_new_comment_email, send_new_reply_email
 from bluelog.extensions import db
-from bluelog.forms import CommentForm, AdminCommentForm
-from bluelog.models import Post, Category, Comment
+from bluelog.forms import CommentForm, AdminCommentForm, SearchForm
+from bluelog.models import Post, Category, Comment, Tag
 from bluelog.utils import redirect_back
 
 blog_bp = Blueprint('blog', __name__)
@@ -31,6 +26,21 @@ def about():
     return render_template('blog/about.html')
 
 
+@blog_bp.route('/result/<path:content>', methods=['GET', 'POST'])
+def result(content):
+    posts = Post.query.filter(Post.title.like("%" + content + "%")).all()
+    return render_template('blog/result.html', posts=posts)
+
+
+@blog_bp.route('/search', methods=['GET', 'POST'])
+def search():
+    form = SearchForm()
+    if form.validate_on_submit():
+        content = form.content.data
+        return redirect(url_for('.result', content=content))
+    return render_template('blog/search.html', form=form)
+
+
 @blog_bp.route('/category/<int:category_id>')
 def show_category(category_id):
     category = Category.query.get_or_404(category_id)
@@ -39,6 +49,16 @@ def show_category(category_id):
     pagination = Post.query.with_parent(category).order_by(Post.timestamp.desc()).paginate(page, per_page)
     posts = pagination.items
     return render_template('blog/category.html', category=category, pagination=pagination, posts=posts)
+
+
+@blog_bp.route('/tag/<int:tag_id>')
+def show_tag(tag_id):
+    tag = Tag.query.get_or_404(tag_id)
+    page = request.args.get('page', 1, type=int)
+    per_page = current_app.config['BLUELOG_POST_PER_PAGE']
+    pagination = Post.query.with_parent(tag).order_by(Post.timestamp.desc()).paginate(page, per_page)
+    posts = pagination.items
+    return render_template('blog/tag.html', tag=tag, pagination=pagination, posts=posts)
 
 
 @blog_bp.route('/post/<int:post_id>', methods=['GET', 'POST'])
@@ -104,3 +124,5 @@ def change_theme(theme_name):
     response = make_response(redirect_back())
     response.set_cookie('theme', theme_name, max_age=30 * 24 * 60 * 60)
     return response
+
+

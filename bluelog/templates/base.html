@@ -8,9 +8,11 @@
         <title>{% block title %}{% endblock title %} - {{ admin.blog_title|default('Blog Title') }}</title>
         <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
         <link rel="stylesheet"
-              href="{{ url_for('static', filename='css/%s.min.css' % request.cookies.get('theme', 'perfect_blue')) }}"
+              href="{{ url_for('static', filename='css/%s.min.css' % request.cookies.get('theme', 'black_swan')) }}"
               type="text/css">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" type="text/css">
+        
+        {{ ckeditor.load_code_theme() }}
     {% endblock head %}
 </head>
 <body>
@@ -25,6 +27,7 @@
             <div class="collapse navbar-collapse" id="navbarColor01">
                 <ul class="navbar-nav mr-auto">
                     {{ render_nav_item('blog.index', 'Home') }}
+                    {{ render_nav_item('blog.search', 'Search')}}
                     {{ render_nav_item('blog.about', 'About') }}
                 </ul>
 
@@ -39,6 +42,7 @@
                             <div class="dropdown-menu" aria-labelledby="navbarDropdown">
                                 <a class="dropdown-item" href="{{ url_for('admin.new_post') }}">Post</a>
                                 <a class="dropdown-item" href="{{ url_for('admin.new_category') }}">Category</a>
+                                <a class="dropdown-item" href="{{ url_for('admin.new_tag') }}">Tag</a>
                                 <a class="dropdown-item" href="{{ url_for('admin.new_link') }}">Link</a>
                             </div>
                         </li>
@@ -54,6 +58,7 @@
                             <div class="dropdown-menu" aria-labelledby="navbarDropdown">
                                 <a class="dropdown-item" href="{{ url_for('admin.manage_post') }}">Post</a>
                                 <a class="dropdown-item" href="{{ url_for('admin.manage_category') }}">Category</a>
+                                <a class="dropdown-item" href="{{ url_for('admin.manage_tag') }}">Tag</a>
                                 <a class="dropdown-item" href="{{ url_for('admin.manage_comment') }}">
                                     Comment
                                     {% if unread_comments %}
@@ -81,12 +86,14 @@
     {% block content %}{% endblock content %}
     {% block footer %}
         <footer>
+            <!--
             <p class="float-left">
                 <small> &copy; 2018 <a href="http://greyli.com" title="Written by Grey Li">Grey Li</a> -
                     <a href="https://github.com/greyli/bluelog" title="Fork me on GitHub">GitHub</a> -
                     <a href="http://helloflask.com" title="A HelloFlask project">HelloFlask</a>
                 </small>
             </p>
+            -->
             <p class="float-right">
                 <small>
                     {% if current_user.is_authenticated %}

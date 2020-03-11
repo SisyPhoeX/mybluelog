@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-    :author: Grey Li (李辉)
-    :url: http://greyli.com
-    :copyright: © 2018 Grey Li <withlihui@gmail.com>
-    :license: MIT, see LICENSE for more details.
-"""
+
 import os
 import sys
 
@@ -28,6 +23,9 @@ class BaseConfig(object):
 
     CKEDITOR_ENABLE_CSRF = True
     CKEDITOR_FILE_UPLOADER = 'admin.upload_image'
+    CKEDITOR_ENABLE_CODESNIPPET = True
+    CKEDITOR_EXTRA_PLUGINS = ['mathjax']
+    # CKEDITOR_PKG_TYPE = 'full'
 
     MAIL_SERVER = os.getenv('MAIL_SERVER')
     MAIL_PORT = 465
@@ -37,9 +35,9 @@ class BaseConfig(object):
     MAIL_DEFAULT_SENDER = ('Bluelog Admin', MAIL_USERNAME)
 
     BLUELOG_EMAIL = os.getenv('BLUELOG_EMAIL')
-    BLUELOG_POST_PER_PAGE = 10
-    BLUELOG_MANAGE_POST_PER_PAGE = 15
-    BLUELOG_COMMENT_PER_PAGE = 15
+    BLUELOG_POST_PER_PAGE = 8
+    BLUELOG_MANAGE_POST_PER_PAGE = 16
+    BLUELOG_COMMENT_PER_PAGE = 8
     # ('theme name', 'display name')
     BLUELOG_THEMES = {'perfect_blue': 'Perfect Blue', 'black_swan': 'Black Swan'}
     BLUELOG_SLOW_QUERY_THRESHOLD = 1

@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-    :author: Grey Li (李辉)
-    :url: http://greyli.com
-    :copyright: © 2018 Grey Li <withlihui@gmail.com>
-    :license: MIT, see LICENSE for more details.
-"""
+
 import logging
 import os
 from logging.handlers import SMTPHandler, RotatingFileHandler
@@ -19,7 +14,7 @@ from bluelog.blueprints.admin import admin_bp
 from bluelog.blueprints.auth import auth_bp
 from bluelog.blueprints.blog import blog_bp
 from bluelog.extensions import bootstrap, db, login_manager, csrf, ckeditor, mail, moment, toolbar, migrate
-from bluelog.models import Admin, Post, Category, Comment, Link
+from bluelog.models import Admin, Tag, Post, Category, Comment, Link
 from bluelog.settings import config
 
 basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
@@ -40,6 +35,9 @@ def create_app(config_name=None):
     register_shell_context(app)
     register_template_context(app)
     register_request_handlers(app)
+    register_public_posts_filter(app)
+    register_sort_items(app)
+    register_re_arrange(app)
     return app
 
 
@@ -91,14 +89,14 @@ def register_extensions(app):
 
 def register_blueprints(app):
     app.register_blueprint(blog_bp)
-    app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(admin_bp, url_prefix='/admin')  # url_prefix 避免路由URL冲突
     app.register_blueprint(auth_bp, url_prefix='/auth')
 
 
 def register_shell_context(app):
     @app.shell_context_processor
     def make_shell_context():
-        return dict(db=db, Admin=Admin, Post=Post, Category=Category, Comment=Comment)
+        return dict(db=db, Admin=Admin, Tag=Tag, Post=Post, Category=Category, Comment=Comment)
 
 
 def register_template_context(app):
@@ -107,13 +105,14 @@ def register_template_context(app):
         admin = Admin.query.first()
         categories = Category.query.order_by(Category.name).all()
         links = Link.query.order_by(Link.name).all()
+        tags = Tag.query.order_by(Tag.name).all()
         if current_user.is_authenticated:
             unread_comments = Comment.query.filter_by(reviewed=False).count()
         else:
             unread_comments = None
         return dict(
             admin=admin, categories=categories,
-            links=links, unread_comments=unread_comments)
+            links=links, tags=tags, unread_comments=unread_comments)
 
 
 def register_errors(app):
@@ -165,7 +164,7 @@ def register_commands(app):
             click.echo('Creating the temporary administrator account...')
             admin = Admin(
                 username=username,
-                blog_title='Bluelog',
+                blog_title='MyBlog',
                 blog_sub_title="No, I'm the real thing.",
                 name='Admin',
                 about='Anything about you.'
@@ -184,11 +183,12 @@ def register_commands(app):
 
     @app.cli.command()
     @click.option('--category', default=10, help='Quantity of categories, default is 10.')
+    @click.option('--tag', default=16, help='Quantity of tags, default is 16')
     @click.option('--post', default=50, help='Quantity of posts, default is 50.')
     @click.option('--comment', default=500, help='Quantity of comments, default is 500.')
-    def forge(category, post, comment):
+    def forge(category, tag, post, comment):
         """Generate fake data."""
-        from bluelog.fakes import fake_admin, fake_categories, fake_posts, fake_comments, fake_links
+        from bluelog.fakes import fake_admin, fake_categories, fake_tags, fake_posts, fake_comments, fake_links
 
         db.drop_all()
         db.create_all()
@@ -198,6 +198,9 @@ def register_commands(app):
 
         click.echo('Generating %d categories...' % category)
         fake_categories(category)
+
+        click.echo('Generating %d tags...' % tag)
+        fake_tags(tag)
 
         click.echo('Generating %d posts...' % post)
         fake_posts(post)
@@ -221,3 +224,30 @@ def register_request_handlers(app):
                     % (q.duration, q.context, q.statement)
                 )
         return response
+
+
+def register_public_posts_filter(app):
+    @app.template_filter()
+    def public(posts):
+        num = 0
+        for post in posts:
+            if post.published is True:
+                num = num + 1
+        return num
+
+
+def register_sort_items(app):
+    @app.template_filter()
+    def sort_items(items):
+        items.sort(key=lambda item: len(item.posts), reverse=True)
+        return ''
+
+
+def register_re_arrange(app):
+    @app.template_filter()
+    def re_arrange(posts):
+        for post in posts:
+            if post.pinned is False:
+                posts.remove(post)
+                posts.append(post)
+        return ''

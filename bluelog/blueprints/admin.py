@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-    :author: Grey Li (李辉)
-    :url: http://greyli.com
-    :copyright: © 2018 Grey Li <withlihui@gmail.com>
-    :license: MIT, see LICENSE for more details.
-"""
+
 import os
 
 from flask import render_template, flash, redirect, url_for, request, current_app, Blueprint, send_from_directory
@@ -12,8 +7,8 @@ from flask_login import login_required, current_user
 from flask_ckeditor import upload_success, upload_fail
 
 from bluelog.extensions import db
-from bluelog.forms import SettingForm, PostForm, CategoryForm, LinkForm
-from bluelog.models import Post, Category, Comment, Link
+from bluelog.forms import SettingForm, PostForm, CategoryForm, LinkForm, TagForm
+from bluelog.models import Post, Category, Comment, Link, Tag
 from bluelog.utils import redirect_back, allowed_file
 
 admin_bp = Blueprint('admin', __name__)
@@ -56,7 +51,13 @@ def new_post():
         title = form.title.data
         body = form.body.data
         category = Category.query.get(form.category.data)
-        post = Post(title=title, body=body, category=category)
+        tags = []
+        for tag in form.tags.data:
+            tags.append(Tag.query.get(tag))
+        # tags = Tag.query.get(form.tags.data)
+        published = form.published.data
+        pinned = form.pinned.data
+        post = Post(title=title, body=body, tags=tags, category=category, published=published, pinned=pinned)
         # same with:
         # category_id = form.category.data
         # post = Post(title=title, body=body, category_id=category_id)
@@ -76,6 +77,11 @@ def edit_post(post_id):
         post.title = form.title.data
         post.body = form.body.data
         post.category = Category.query.get(form.category.data)
+        tags = []
+        for tag in form.tags.data:
+            tags.append(Tag.query.get(tag))
+        post.published = form.published.data
+        post.pinned = form.pinned.data
         db.session.commit()
         flash('Post updated.', 'success')
         return redirect(url_for('blog.show_post', post_id=post.id))
@@ -195,6 +201,51 @@ def delete_category(category_id):
     category.delete()
     flash('Category deleted.', 'success')
     return redirect(url_for('.manage_category'))
+
+
+@admin_bp.route('/tag/manage')
+@login_required
+def manage_tag():
+    return render_template('admin/manage_tag.html')
+
+
+@admin_bp.route('/tag/new', methods=['GET', 'POST'])
+@login_required
+def new_tag():
+    form = TagForm()
+    if form.validate_on_submit():
+        name = form.name.data
+        tag = Tag(name=name)
+        db.session.add(tag)
+        db.session.commit()
+        flash('Tag created.', 'success')
+        redirect(url_for('.manage_tag'))
+    return render_template('admin/new_tag.html', form=form)
+
+
+@admin_bp.route('tag/<int:tag_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_tag(tag_id):
+    form = TagForm()
+    category = Category.query.get_or_404(tag_id)
+    if form.validate_on_submit():
+        category.name = form.name.data()
+        db.session.commit()
+        flash('Tag updated.', 'success')
+        return redirect(url_for('.manage_tag'))
+
+    form.name.data = category.name
+    return render_template('admin/edit_tag.html', form=form)
+
+
+@admin_bp.route('/tag/<int:tag_id>/delete', methods=['POST'])
+@login_required
+def delete_tag(tag_id):
+    tag = Tag.query.get_or_404(tag_id)
+    tag.delete()
+    flash('Tag deleted.', 'success')
+    return redirect(url_for('.manage_tag'))
+
 
 
 @admin_bp.route('/link/manage')
